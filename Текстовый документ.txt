@@ -1,0 +1,396 @@
+{ "что_мы_собрали": "Полный рабочий комплект из 4 файлов. В нём уже есть всё:
+фирменные цвета DM (#F6269A, #8C0F5D, #B4BCE4), блок «От автора», общая база
+видео и картинок прямо внутри Netlify (через встроенное хранилище Netlify Blobs
+без сторонних регистраций и без засыпания), сжатие фото с телефона перед
+загрузкой и бесплатная расшифровка голоса через ваш ключ Groq.",
+"важная_подсказка_перед_копированием": "Чтобы при вставке на
+GitHub ничего не сломалось, код каждого файла ниже записан в одну строку без
+лишних символов переноса. Просто выделяйте всё внутри кавычек (не включая сами
+внешние кавычки) и вставляйте на GitHub — всё сработает идеально.",
+"файлы_для_создания_на_github": [ { "шаг": 1, "имя_файла":
+"package.json", "содержимое_скопировать_целиком_вместе_со_скобками": { "name":
+"dominoki-refs", "private": true, "type": "module", "dependencies": {
+"@netlify/blobs": "^11.1.3" } } }, { "шаг": 2, "имя_файла":
+"netlify/functions/transcribe.mjs", "подсказка": "Когда на GitHub нажмёте Create
+new file и начнёте вводить netlify/functions/transcribe.mjs в поле имени файла,
+папки netlify и functions создадутся сами после символа /",
+"содержимое_внутри_кавычек": "export default async (req) => {
+if (req.method !== 'POST') { return new Response(JSON.stringify({ error: 'Method
+not allowed' }), { status: 405, headers: { 'Content-Type': 'application/json' }
+}); } const apiKey = process.env.GROQ_API_KEY || (typeof Netlify !== 'undefined'
+? Netlify.env.get('GROQ_API_KEY') : ''); if (!apiKey) { return new
+Response(JSON.stringify({ error: 'Нет ключа GROQ_API_KEY в настройках Netlify'
+}), { status: 500, headers: { 'Content-Type': 'application/json' } }); } try {
+const incoming = await req.formData(); const audioFile = incoming.get('file');
+if (!audioFile || typeof audioFile === 'string') { return new
+Response(JSON.stringify({ error: 'Аудиофайл не получен' }), { status: 400,
+headers: { 'Content-Type': 'application/json' } }); } const arrayBuffer = await
+audioFile.arrayBuffer(); if (arrayBuffer.byteLength < 500) { return new
+Response(JSON.stringify({ text: '' }), { status: 200, headers: { 'Content-Type':
+'application/json' } }); } const fileName = audioFile.name || 'voice.webm';
+const rawType = (audioFile.type || 'audio/webm').split(';')[0]; const blob = new
+Blob([arrayBuffer], { type: rawType }); const groqForm = new FormData();
+groqForm.append('file', blob, fileName); groqForm.append('model',
+'whisper-large-v3-turbo'); groqForm.append('language', 'ru');
+groqForm.append('response_format', 'json'); const groqRes = await
+fetch('https://api.groq.com/openai/v1/audio/transcriptions', { method: 'POST',
+headers: { Authorization: 'Bearer ' + apiKey }, body: groqForm }); const data =
+await groqRes.json(); if (!groqRes.ok) { return new Response(JSON.stringify({
+error: (data.error && data.error.message) || 'Ошибка Groq API' }), { status:
+groqRes.status, headers: { 'Content-Type': 'application/json' } }); } return new
+Response(JSON.stringify({ text: (data.text || '').trim() }), { status: 200,
+headers: { 'Content-Type': 'application/json' } }); } catch (err) { return new
+Response(JSON.stringify({ error: err.message || 'Ошибка сервера' }), {
+status: 500, headers: { 'Content-Type': 'application/json' } }); } };" }, {
+"шаг": 3, "имя_файла": "netlify/functions/api.mjs", "подсказка": "Создаётся
+рядом с transcribe.mjs в той же папке netlify/functions/",
+"содержимое_внутри_кавычек": "import { getStore } from
+'@netlify/blobs'; const jsonRes = (obj, status = 200) => new
+Response(JSON.stringify(obj), { status, headers: { 'Content-Type':
+'application/json', 'Cache-Control': 'no-store' } }); export default async (req)
+=> { const adminPin = process.env.ADMIN_PIN || (typeof Netlify !== 'undefined' ?
+Netlify.env.get('ADMIN_PIN') : '') || ''; const checkAdmin = () => !adminPin ||
+req.headers.get('x-admin-pin') === adminPin; const store = getStore({ name:
+'dominoki-refs', consistency: 'strong' }); const url = new URL(req.url); const
+mediaId = url.searchParams.get('media'); try { if (req.method === 'GET' &&
+mediaId) { const entry = await store.getWithMetadata('media:' + mediaId, { type:
+'arrayBuffer' }); if (!entry) return new Response('Not found', { status: 404 });
+const ct = (entry.metadata && entry.metadata.contentType) || 'image/jpeg';
+return new Response(entry.data, { status: 200, headers: { 'Content-Type': ct,
+'Cache-Control': 'public, max-age=31536000, immutable' } }); } if (req.method
+=== 'POST' && mediaId) { const form = await req.formData(); const file =
+form.get('file'); if (!file || typeof file === 'string') return jsonRes({ error:
+'Файл не найден' }, 400); const buf = await file.arrayBuffer(); if
+(buf.byteLength > 4200000) return jsonRes({ error: 'Файл слишком большой'
+}, 413); const id = Date.now().toString(36) + '' +
+Math.random().toString(36).slice(2, 8); const ct = (file.type ||
+'image/jpeg').split(';')[0]; await store.set('media:' + id, buf, { metadata: {
+contentType: ct } }); return jsonRes({ id }, 201); } if (req.method === 'GET' &&
+url.searchParams.get('verifyPin')) { return jsonRes({ ok: checkAdmin() }); } if
+(req.method === 'GET') { const seeded = await store.get('meta:seeded'); if
+(!seeded) { await store.setJSON('ref:101', { id: 101, ytId: 'aqz-KE-bpKQ',
+title: 'Пример видеореференса', folder: 'Партия #1', adminNote: 'Посмотрите темп
+и цвета — всё ли подходит?', comment: '', attachments: [], status: 'pending',
+createdAt: Date.now(), updatedAt: Date.now() }); await store.set('meta:seeded',
+'1'); } const { blobs } = await store.list({ prefix: 'ref:' }); const loaded =
+await Promise.all(blobs.map(b => store.get(b.key, { type: 'json' }))); const
+refs = loaded.filter(Boolean).sort((a, b) => b.id - a.id); return jsonRes({
+refs, pinRequired: Boolean(adminPin) }); } if (req.method === 'POST') { if
+(!checkAdmin()) return jsonRes({ error: 'Неверный ПИН администратора' }, 401);
+const body = await req.json(); if (!body.ytId || String(body.ytId).length
+!== 11) return jsonRes({ error: 'Неверная ссылка YouTube' }, 400); const { blobs
+} = await store.list({ prefix: 'ref:' }); const maxId = blobs.reduce((m, b) =>
+Math.max(m, Number(b.key.slice(4)) || 0), 100); let newId = maxId + 1; const
+item = { id: newId, ytId: String(body.ytId), title: String(body.title ||
+'').trim() || ('Референс #' + newId), folder: String(body.folder || '').trim()
+|| 'Общее', adminNote: String(body.adminNote || '').trim(), comment: '',
+attachments: [], status: 'pending', createdAt: Date.now(), updatedAt: Date.now()
+}; try { const r = await store.setJSON('ref:' + newId, item, { onlyIfNew: true
+}); if (r && r.modified === false) throw 1; } catch (e) { newId += 1; item.id =
+newId; item.title = String(body.title || '').trim() || ('Референс #' + newId);
+await store.setJSON('ref:' + newId, item); } return jsonRes({ ref: item }, 201);
+} if (req.method === 'PUT') { const body = await req.json(); const id =
+Number(body.id); if (!id) return jsonRes({ error: 'Нет ID' }, 400); const
+existing = await store.get('ref:' + id, { type: 'json' }); if (!existing) return
+jsonRes({ error: 'Референс не найден' }, 404); if (typeof body.comment ===
+'string') existing.comment = body.comment; if (body.status === 'pending' ||
+body.status === 'done') existing.status = body.status; if
+(Array.isArray(body.attachments)) { const keepIds = new
+Set(body.attachments.map(a => a && a.id).filter(Boolean)); for (const oldAtt of
+(existing.attachments || [])) { if (oldAtt && oldAtt.id &&
+!keepIds.has(oldAtt.id)) { await store.delete('media:' + oldAtt.id); } }
+existing.attachments = body.attachments.filter(a => a && a.id).map(a => ({ id:
+String(a.id), type: a.type === 'sketch' ? 'sketch' : 'photo' })); } if (typeof
+body.adminNote === 'string' && checkAdmin()) existing.adminNote =
+body.adminNote; existing.updatedAt = Date.now(); await store.setJSON('ref:' +
+id, existing); return jsonRes({ ref: existing }); } if (req.method === 'DELETE')
+{ if (!checkAdmin()) return jsonRes({ error: 'Неверный ПИН администратора'
+}, 401); const id = Number(url.searchParams.get('id')); if (!id) return
+jsonRes({ error: 'Нет ID' }, 400); const existing = await store.get('ref:' + id,
+{ type: 'json' }); if (existing && Array.isArray(existing.attachments)) { for
+(const att of existing.attachments) { if (att && att.id) await
+store.delete('media:' + att.id); } } await store.delete('ref:' + id); return
+jsonRes({ ok: true }); } return jsonRes({ error: 'Method not allowed' }, 405); }
+catch (err) { return jsonRes({ error: err.message || 'Ошибка сервера' }, 500); }
+};" }, { "шаг": 4, "имя_файла": "index.html", "подсказка": "Создаётся в самом
+корне репозитория, рядом с package.json", "содержимое_внутри_кавычек": "Dominoki
+—
+Видеореференсы:root{--primary:#F6269A;--primary-btn:#E21B88;--primary-text:#FFFFFF;--primary-soft:#FDF2F8;--primary-plum:#8C0F5D;--ring-blue:#B4BCE4;--bg:#F6F7FB;--surface:#FFFFFF;--text:#18181B;--muted:#71717A;--border:#E4E4E7;--pending:#F59E0B;--pending-bg:#FEF3C7;--done:#10B981;--done-bg:#D1FAE5;--danger:#EF4444;--radius:14px;}{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}body{margin:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe
+UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.4;touch-action:manipulation;}.app{max-width:520px;margin:0
+auto;min-height:100dvh;background:var(--bg);display:flex;flex-direction:column;padding-bottom:24px;}.header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:2px
+solid
+var(--primary);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}.brand{font-weight:700;font-size:16px;display:flex;align-items:center;gap:10px;min-width:0;}.brand-logo{width:28px;height:28px;border-radius:50%;background:#FFFFFF;border:2px
+solid var(--primary-plum);box-shadow:0 0 0 3px
+var(--ring-blue);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--primary);letter-spacing:-0.5px;flex-shrink:0;}.header-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}.refresh-btn{width:32px;height:32px;border-radius:50%;border:1px
+solid
+var(--border);background:var(--surface);cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;}.role-btn{font-size:12px;font-weight:600;padding:6px 10px;border-radius:20px;border:1px
+solid
+var(--border);background:var(--surface);cursor:pointer;}.role-btn.admin{background:var(--primary-btn);color:var(--primary-text);border-color:var(--primary-btn);}.section{padding:12px 16px 0;}.search-row{display:flex;gap:8px;margin-bottom:12px;}.input{width:100%;padding:10px 12px;border-radius:12px;border:1px
+solid
+var(--border);background:var(--surface);font-size:16px;outline:none;}.input:focus{border-color:var(--primary);}.btn{border:none;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:transform 0.08s
+ease,opacity 0.15s;}.btn:active{transform:scale(0.97);}.btn:disabled{opacity:0.6;cursor:not-allowed;}.btn-primary{background:var(--primary-btn);color:var(--primary-text);}.btn-success{background:var(--done);color:#FFFFFF;}.btn-ghost{background:var(--surface);border:1px
+solid
+var(--border);color:var(--text);}.btn-danger{background:#FEE2E2;color:var(--danger);}.filter-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;background:#E8EAF4;padding:4px;border-radius:12px;margin-bottom:12px;}.filter-tab{border:none;background:transparent;padding:8px 4px;border-radius:9px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;}.filter-tab.active{background:var(--surface);color:var(--primary-plum);box-shadow:0 1px 3px
+rgba(140,15,93,0.12);}.catalog-list{display:flex;flex-direction:column;gap:10px;padding:0 16px;}.card{background:var(--surface);border-radius:var(--radius);border:1px
+solid
+var(--border);padding:10px;display:flex;gap:12px;cursor:pointer;align-items:center;}.card.is-done{opacity:0.78;}.thumb-wrap{position:relative;width:108px;height:62px;border-radius:9px;overflow:hidden;flex-shrink:0;background:#18181B;}.thumb-wrap
+img{width:100%;height:100%;object-fit:cover;}.ref-id-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.78);color:#FFFFFF;font-size:10px;font-weight:700;padding:2px 5px;border-radius:5px;}.card-body{flex:1;min-width:0;}.card-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:4px;}.card-title{font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.status-pill{font-size:11px;font-weight:700;padding:3px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}.status-pending{background:var(--pending-bg);color:#92400E;}.status-done{background:var(--done-bg);color:#065F46;}.card-meta{font-size:12px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}.quick-tabs{display:flex;gap:6px;overflow-x:auto;padding:10px 16px;background:var(--surface);border-bottom:1px
+solid
+var(--border);scrollbar-width:none;}.quick-tabs::-webkit-scrollbar{display:none;}.q-tab{display:inline-flex;align-items:center;gap:5px;padding:6px 10px;border-radius:10px;border:1px
+solid
+var(--border);background:var(--bg);font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;}.q-tab.active{background:var(--primary-btn);border-color:var(--primary-btn);color:var(--primary-text);}.q-dot{width:7px;height:7px;border-radius:50%;}.q-dot.pending{background:var(--pending);}.q-dot.done{background:var(--done);}.workspace{padding:12px 16px;display:flex;flex-direction:column;gap:12px;}.ws-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;}.player-box{position:relative;width:100%;aspect-ratio:16/9;background:#000000;border-radius:var(--radius);overflow:hidden;}.player-box
+iframe{position:absolute;inset:0;width:100%;height:100%;border:0;}.admin-note{background:var(--primary-soft);border-left:3px
+solid
+var(--primary);color:#500724;padding:10px 12px;border-radius:8px;font-size:13px;}.editor-card{background:var(--surface);border:1px
+solid
+var(--border);border-radius:var(--radius);padding:12px;display:flex;flex-direction:column;gap:10px;}.editor-head{display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;color:var(--muted);}.save-state{font-size:11px;font-weight:600;color:var(--muted);}.comment-area{width:100%;min-height:110px;border:1px
+solid
+var(--border);border-radius:10px;padding:10px;font-family:inherit;font-size:16px;resize:vertical;outline:none;}.comment-area:focus{border-color:var(--primary);}.tools-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}.icon-btn{height:44px;padding:0 14px;border-radius:12px;border:1px
+solid
+var(--border);background:var(--bg);font-size:14px;font-weight:600;display:inline-flex;align-items:center;gap:6px;cursor:pointer;}.icon-btn:disabled{opacity:0.6;cursor:not-allowed;}.icon-btn.recording{background:#FEE2E2;border-color:var(--danger);color:var(--danger);animation:pulse 1.2s
+infinite;}@keyframes
+pulse{0%,100%{opacity:1;}50%{opacity:0.65;}}.attachments-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;}.att-item{position:relative;aspect-ratio:1/1;border-radius:10px;overflow:hidden;border:1px
+solid var(--border);background:#FFFFFF;}.att-item
+img{width:100%;height:100%;object-fit:cover;display:block;}.att-badge{position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,0.65);color:#FFFFFF;font-size:10px;padding:2px 5px;border-radius:4px;}.att-del{position:absolute;top:4px;right:4px;width:24px;height:24px;border-radius:50%;border:none;background:rgba(0,0,0,0.7);color:#FFFFFF;font-weight:700;cursor:pointer;}.modal-backdrop{position:fixed;inset:0;z-index:50;background:rgba(0,0,0,0.6);display:none;align-items:flex-end;justify-content:center;}.modal-backdrop.open{display:flex;}.modal-sheet{width:100%;max-width:520px;background:var(--surface);border-radius:18px 18px 0 0;padding:16px;display:flex;flex-direction:column;gap:12px;max-height:92dvh;overflow-y:auto;}.draw-modal{position:fixed;inset:0;z-index:60;background:#18181B;display:none;flex-direction:column;height:100dvh;}.draw-modal.open{display:flex;}.draw-top{padding:10px 12px;display:flex;justify-content:space-between;align-items:center;color:#FFFFFF;gap:8px;}.canvas-wrap{flex:1;margin:0 10px;background:#FFFFFF;border-radius:12px;overflow:hidden;position:relative;}#sketchCanvas{width:100%;height:100%;display:block;touch-action:none;}.draw-bottom{padding:10px 12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;}.colors{display:flex;gap:8px;align-items:center;}.color-dot{width:28px;height:28px;border-radius:50%;border:2px
+solid
+rgba(255,255,255,0.3);cursor:pointer;}.color-dot.active{border-color:#FFFFFF;transform:scale(1.15);}.lightbox{position:fixed;inset:0;z-index:70;background:rgba(0,0,0,0.92);display:none;align-items:center;justify-content:center;padding:16px;}.lightbox.open{display:flex;}.lightbox
+img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!important;}.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#18181B;color:#FFFFFF;padding:10px 16px;border-radius:24px;font-size:13px;z-index:90;opacity:0;pointer-events:none;transition:opacity 0.2s;max-width:90%;text-align:center;}.toast.show{opacity:1;}DMDominoki↻Заказчик+
+ВидеоОжидают (0)Готово (0)Все (0)Загрузка каталога...← КаталогКомментарий / что
+изменить:🎤 Голос📎 Фото✏️ Набросок✓ Отметить как обработанныйУдалить референс
+(Админ)Новый видеореференсОтменаДобавить в каталогОтмена🖼 Фон↩
+ОтменаОчиститьПрикрепить рисунокlet refs=[];let
+currentFilter='pending';let activeRefId=null;let isAdmin=false;let
+pinRequired=false;let
+savedPin=localStorage.getItem('dominoki_admin_pin')||'';let draftTimer=null;let
+mediaRecorder=null;let audioChunks=[];let audioStream=null;let
+isRecording=false;let recMaxTimer=null;function escapeHtml(str){return
+String(str||'').replaceAll('&','&').replaceAll('<','<').replaceAll('>','>').replaceAll(String.fromCharCode(34),'"');}function
+showToast(msg){const
+el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(window._toastTimer);window._toastTimer=setTimeout(()=>el.classList.remove('show'),2600);}function
+extractYouTubeId(raw){try{const u=new URL(raw.trim());const
+host=u.hostname.replace('www.','').replace('m.','');let
+id='';if(host==='youtu.be'){id=u.pathname.split('/').filter(Boolean)[0]||'';}else
+if(host==='youtube.com'||host==='music.youtube.com'){if(u.searchParams.get('v')){id=u.searchParams.get('v');}else{const
+parts=u.pathname.split('/').filter(Boolean);const
+idx=parts.findIndex(p=>['shorts','embed','live','v'].includes(p));if(idx!==-1&&parts[idx+1])id=parts[idx+1];}}id=id.slice(0,11);return
+id.length===11?id:null;}catch(e){return null;}}async function
+loadRefs(silent){try{const res=await fetch('/.netlify/functions/api');const
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка
+загрузки');refs=data.refs||[];pinRequired=Boolean(data.pinRequired);if(activeRefId){const
+current=refs.find(r=>r.id===activeRefId);if(current){updateDetailStatusUI(current);renderAttachments(current);renderQuickTabs();}else{goCatalog();}}else{renderCatalog();}if(!silent)showToast('Обновлено');}catch(err){if(!silent)showToast(err.message);}}async
+function
+toggleRole(){if(isAdmin){isAdmin=false;applyRoleUI();return;}if(!pinRequired){isAdmin=true;applyRoleUI();return;}let
+pin=savedPin;if(!pin){pin=prompt('Введите ПИН
+администратора:');if(pin===null)return;}try{const res=await
+fetch('/.netlify/functions/api?verifyPin=1',{headers:{'x-admin-pin':pin}});const
+data=await
+res.json();if(data.ok){savedPin=pin;localStorage.setItem('dominoki_admin_pin',pin);isAdmin=true;applyRoleUI();}else{localStorage.removeItem('dominoki_admin_pin');savedPin='';const
+retry=prompt('ПИН неверный. Попробуйте ещё раз:');if(!retry)return;const
+res2=await
+fetch('/.netlify/functions/api?verifyPin=1',{headers:{'x-admin-pin':retry}});const
+data2=await
+res2.json();if(data2.ok){savedPin=retry;localStorage.setItem('dominoki_admin_pin',retry);isAdmin=true;applyRoleUI();}else{showToast('Неверный
+ПИН-код');}}}catch(err){showToast('Ошибка проверки ПИН');}}function
+applyRoleUI(){const
+btn=document.getElementById('roleBtn');btn.textContent=isAdmin?'Я
+(Админ)':'Заказчик';btn.classList.toggle('admin',isAdmin);document.getElementById('addRefBtn').classList.toggle('hidden',!isAdmin);document.getElementById('deleteRefBtn').classList.toggle('hidden',!isAdmin);}function
+setFilter(filter){currentFilter=filter;document.querySelectorAll('.filter-tab').forEach(t=>t.classList.toggle('active',t.dataset.filter===filter));renderCatalog();}function
+getFilteredRefs(){const
+q=document.getElementById('searchInput').value.trim().toLowerCase();return
+refs.filter(r=>{const
+matchStatus=currentFilter==='all'||r.status===currentFilter;const
+matchQuery=!q||String(r.id).includes(q)||(r.title||'').toLowerCase().includes(q)||(r.folder||'').toLowerCase().includes(q);return
+matchStatus&&matchQuery;});}function renderCatalog(){const
+pendingCount=refs.filter(r=>r.status==='pending').length;const
+doneCount=refs.filter(r=>r.status==='done').length;document.getElementById('cntPending').textContent=pendingCount;document.getElementById('cntDone').textContent=doneCount;document.getElementById('cntAll').textContent=refs.length;const
+list=getFilteredRefs();const
+container=document.getElementById('catalogList');if(!list.length){container.innerHTML=<div
+style='text-align:center;padding:40px 16px;color:var(--muted);'>Здесь пока
+пусто</div>;return;}container.innerHTML=list.map(r=>{const
+isDone=r.status==='done';const
+hasDraft=!isDone&&((r.comment||'').trim()||(r.attachments&&r.attachments.length));const
+statusText=isDone?'Обработано':(hasDraft?'Черновик':'Ждёт разбора');const
+statusClass=isDone?'status-done':'status-pending';const
+metaParts=[r.folder||'Без папки'];if(r.comment)metaParts.push('💬
+'+r.comment);if(r.attachments&&r.attachments.length)metaParts.push('📎
+'+r.attachments.length);return <div class='card ${isDone?'is-done':''}'
+onclick='openRef(${r.id})'><div class='thumb-wrap'><img
+src='https://img.youtube.com/vi/${escapeHtml(r.ytId)}/mqdefault.jpg' alt=''
+loading='lazy' /><span class='ref-id-badge'>#${r.id}</span></div><div
+class='card-body'><div class='card-top'><div
+class='card-title'>${escapeHtml(r.title)}</div><span class='status-pill
+${statusClass}'>${statusText}</span></div><div
+class='card-meta'>${escapeHtml(metaParts.join(' •
+'))}</div></div></div>;}).join('');}async function goCatalog(){await
+flushDraft();stopSpeechIfActive();activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();}async
+function openRef(id){if(activeRefId&&activeRefId!id)await
+flushDraft();stopSpeechIfActive();activeRefId=id;const
+ref=refs.find(r=>r.id===id);if(!ref)return;document.getElementById('catalogView').classList.add('hidden');document.getElementById('detailView').classList.remove('hidden');renderQuickTabs();document.getElementById('detailIdBadge').textContent='#'+ref.id;document.getElementById('detailTitle').textContent=ref.title;document.getElementById('ytPlayer').src='https://www.youtube.com/embed/'+ref.ytId+'?playsinline=1&rel=0';const
+noteBox=document.getElementById('adminNoteBox');if(ref.adminNote){noteBox.textContent='От
+автора:
+'+ref.adminNote;noteBox.classList.remove('hidden');}else{noteBox.classList.add('hidden');}document.getElementById('commentInput').value=ref.comment||'';document.getElementById('saveStateLabel').textContent='';updateDetailStatusUI(ref);renderAttachments(ref);window.scrollTo({top:0,behavior:'instant'});}function
+renderQuickTabs(){const
+list=getFilteredRefs();document.getElementById('quickTabs').innerHTML=list.map(r=><div
+class='q-tab ${r.id===activeRefId?'active':''}' onclick='openRef(${r.id})'><span
+class='q-dot ${r.status}'></span><span>#${r.id}</span></div>).join('');}function
+updateDetailStatusUI(ref){const
+pill=document.getElementById('detailStatusPill');const
+btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill
+status-done';btn.textContent='↺ Вернуть в доработку';btn.className='btn
+btn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill
+status-pending';btn.textContent='✓ Готово / Отправить
+комментарий';btn.className='btn btn-success';}}async function
+saveRefPatch(id,patch){const
+label=document.getElementById('saveStateLabel');label.textContent='Сохраняется...';const
+res=await
+fetch('/.netlify/functions/api',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...patch})});const
+data=await res.json();if(!res.ok){label.textContent='Ошибка сохранения';throw
+new Error(data.error||'Ошибка сохранения');}const
+idx=refs.findIndex(r=>r.id===id);if(idx!-1)refs[idx]=data.ref;label.textContent='Сохранено
+✓';return data.ref;}function scheduleSaveDraft(){const
+ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;document.getElementById('saveStateLabel').textContent='Печатает...';clearTimeout(draftTimer);const
+targetId=ref.id;const
+text=ref.comment;draftTimer=setTimeout(()=>saveRefPatch(targetId,{comment:text}).catch(e=>showToast(e.message)),700);}async
+function
+flushDraft(){if(!draftTimer||!activeRefId)return;clearTimeout(draftTimer);draftTimer=null;const
+ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;await
+saveRefPatch(ref.id,{comment:ref.comment}).catch(()=>{});}async function
+toggleComplete(){const
+ref=refs.find(r=>r.id===activeRefId);if(!ref)return;clearTimeout(draftTimer);draftTimer=null;const
+nextStatus=ref.status==='done'?'pending':'done';const
+commentText=document.getElementById('commentInput').value;ref.comment=commentText;try{const
+updated=await
+saveRefPatch(ref.id,{comment:commentText,status:nextStatus});updateDetailStatusUI(updated);renderQuickTabs();if(updated.status==='done'){showToast('Референс
+#'+updated.id+' отмечен как готовый!');const
+nextPending=refs.find(r=>r.status==='pending');if(nextPending)setTimeout(()=>openRef(nextPending.id),550);}}catch(err){showToast(err.message);}}function
+compressImage(file,maxW,quality){return new Promise((resolve,reject)=>{const
+img=new Image();const
+objUrl=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(objUrl);let
+w=img.width;let h=img.height;if(w>maxW){h=Math.round(h(maxW/w));w=maxW;}const
+c=document.createElement('canvas');c.width=w;c.height=h;const
+cctx=c.getContext('2d');cctx.fillStyle='#FFFFFF';cctx.fillRect(0,0,w,h);cctx.drawImage(img,0,0,w,h);c.toBlob(b=>b?resolve(b):reject(new
+Error('Ошибка
+сжатия')),'image/jpeg',quality);};img.onerror=()=>{URL.revokeObjectURL(objUrl);reject(new
+Error('Не удалось открыть фото'));};img.src=objUrl;});}async function
+uploadMediaBlob(blob,name){const fd=new
+FormData();fd.append('file',blob,name);const res=await
+fetch('/.netlify/functions/api?media=1',{method:'POST',body:fd});const
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка загрузки
+фото');return data.id;}async function handleFiles(event){const
+ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const
+files=Array.from(event.target.files||[]);event.target.value='';if(!files.length)return;showToast('Загрузка
+фото...');for(const file of files){try{const compressed=await
+compressImage(file,1280,0.8);const mediaId=await
+uploadMediaBlob(compressed,'photo.jpg');const
+nextAtt=[...(ref.attachments||[]),{id:mediaId,type:'photo'}];const updated=await
+saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);}catch(err){showToast(err.message);}}}function
+renderAttachments(ref){const
+grid=document.getElementById('attachmentsGrid');const
+atts=ref.attachments||[];grid.innerHTML=atts.map((att,idx)=><div
+class='att-item'><img src='/.netlify/functions/api?media=${escapeHtml(att.id)}'
+onclick='openLightbox(this.src)' alt='' /><span
+class='att-badge'>${att.type==='sketch'?'Набросок':'Фото'}</span><button
+class='att-del'
+onclick='removeAttachment(${idx})'>×</button></div>).join('');}async function
+removeAttachment(idx){const
+ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const
+nextAtt=(ref.attachments||[]).filter((,i)=>i!==idx);try{const updated=await
+saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);}catch(err){showToast(err.message);}}function
+openLightbox(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}function
+closeLightbox(){document.getElementById('lightbox').classList.remove('open');}function
+stopSpeechIfActive(){clearTimeout(recMaxTimer);if(mediaRecorder&&isRecording){try{mediaRecorder.stop();}catch(e){}}}async
+function toggleSpeech(){const micBtn=document.getElementById('micBtn');const
+micLabel=document.getElementById('micLabel');if(isRecording&&mediaRecorder){clearTimeout(recMaxTimer);mediaRecorder.stop();return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){showToast('Микрофон
+недоступен. Откройте сайт по HTTPS в Safari или
+Chrome.');return;}try{audioStream=await
+navigator.mediaDevices.getUserMedia({audio:true});const
+preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];const
+supportedType=preferred.find(t=>MediaRecorder.isTypeSupported(t))||'';audioChunks=[];mediaRecorder=supportedType?new
+MediaRecorder(audioStream,{mimeType:supportedType}):new
+MediaRecorder(audioStream);mediaRecorder.ondataavailable=(e)=>{if(e.data&&e.data.size>0)audioChunks.push(e.data);};mediaRecorder.onstop=async()=>{isRecording=false;clearTimeout(recMaxTimer);micBtn.classList.remove('recording');if(audioStream){audioStream.getTracks().forEach(t=>t.stop());audioStream=null;}const
+rawMime=(mediaRecorder.mimeType||supportedType||'audio/webm').split(';')[0];const
+ext=(rawMime.includes('mp4')||rawMime.includes('m4a'))?'m4a':(rawMime.includes('ogg')?'ogg':'webm');const
+audioBlob=new
+Blob(audioChunks,{type:rawMime});if(audioBlob.size<800){micLabel.textContent='Голос';return;}micLabel.textContent='Расшифровка...';micBtn.disabled=true;try{const
+fd=new FormData();fd.append('file',audioBlob,'voice.'+ext);const res=await
+fetch('/.netlify/functions/transcribe',{method:'POST',body:fd});const data=await
+res.json();if(!res.ok)throw new Error(data.error||'Ошибка
+распознавания');if(data.text){const
+textarea=document.getElementById('commentInput');const
+nl=String.fromCharCode(10);const sep=textarea.value&&!textarea.value.endsWith('
+')&&!textarea.value.endsWith(nl)?' ':'';textarea.value+=sep+data.text;const
+ref=refs.find(r=>r.id===activeRefId);if(ref){ref.comment=textarea.value;await
+saveRefPatch(ref.id,{comment:ref.comment});}}else{showToast('Речь не распознана,
+попробуйте ещё раз');}}catch(err){showToast('Ошибка:
+'+err.message);}finally{micBtn.disabled=false;micLabel.textContent='Голос';}};mediaRecorder.start();isRecording=true;micBtn.classList.add('recording');micLabel.textContent='Говорите...
+(Стоп)';recMaxTimer=setTimeout(()=>{if(isRecording&&mediaRecorder)mediaRecorder.stop();},150000);}catch(err){showToast('Разрешите
+доступ к микрофону в браузере');}}function
+openAddModal(){document.getElementById('addModal').classList.add('open');}function
+closeAddModal(){document.getElementById('addModal').classList.remove('open');}async
+function addReference(){const
+url=document.getElementById('newUrl').value.trim();const
+ytId=extractYouTubeId(url);if(!ytId){showToast('Укажите корректную ссылку на
+YouTube или Shorts');return;}const
+btn=document.getElementById('submitAddBtn');btn.disabled=true;try{const
+res=await
+fetch('/.netlify/functions/api',{method:'POST',headers:{'Content-Type':'application/json','x-admin-pin':savedPin},body:JSON.stringify({ytId,title:document.getElementById('newTitle').value.trim(),folder:document.getElementById('newFolder').value.trim(),adminNote:document.getElementById('newAdminNote').value.trim()})});const
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка
+добавления');refs.unshift(data.ref);document.getElementById('newUrl').value='';document.getElementById('newTitle').value='';document.getElementById('newAdminNote').value='';closeAddModal();setFilter('pending');showToast('Добавлен
+референс
+#'+data.ref.id);}catch(err){showToast(err.message);}finally{btn.disabled=false;}}async
+function deleteCurrentRef(){if(!confirm('Удалить этот референс
+безвозвратно?'))return;try{const res=await
+fetch('/.netlify/functions/api?id='+activeRefId,{method:'DELETE',headers:{'x-admin-pin':savedPin}});const
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка
+удаления');refs=refs.filter(r=>r.id!==activeRefId);activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();showToast('Удалено');}catch(err){showToast(err.message);}}const
+canvas=document.getElementById('sketchCanvas');const
+ctx=canvas.getContext('2d');let strokes=[];let currentStroke=null;let
+drawColor='#EF4444';let bgImage=null;function
+openDrawModal(){document.getElementById('drawModal').classList.add('open');strokes=[];bgImage=null;requestAnimationFrame(resizeCanvas);}function
+closeDrawModal(){document.getElementById('drawModal').classList.remove('open');}function
+resizeCanvas(){const rect=canvas.parentElement.getBoundingClientRect();const
+dpr=window.devicePixelRatio||1;canvas.width=rect.widthdpr;canvas.height=rect.heightdpr;ctx.setTransform(dpr,0,0,dpr,0,0);redrawCanvas();}function
+setColor(el){drawColor=el.dataset.color;document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));el.classList.add('active');}function
+loadSketchBg(event){const
+file=event.target.files&&event.target.files[0];if(!file)return;const reader=new
+FileReader();reader.onload=e=>{const img=new
+Image();img.onload=()=>{bgImage=img;redrawCanvas();};img.src=e.target.result;};reader.readAsDataURL(file);event.target.value='';}function
+redrawCanvas(){const
+rect=canvas.getBoundingClientRect();ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,rect.width,rect.height);if(bgImage){const
+scale=Math.min(rect.width/bgImage.width,rect.height/bgImage.height);const
+w=bgImage.widthscale;const
+h=bgImage.heightscale;ctx.drawImage(bgImage,(rect.width-w)/2,(rect.height-h)/2,w,h);}ctx.lineCap='round';ctx.lineJoin='round';strokes.forEach(s=>{if(!s.points.length)return;ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.beginPath();ctx.moveTo(s.points[0].x,s.points[0].y);for(let
+i=1;i<s.points.length;i++)ctx.lineTo(s.points[i].x,s.points[i].y);ctx.stroke();});}function
+getPos(e){const
+rect=canvas.getBoundingClientRect();return{x:e.clientX-rect.left,y:e.clientY-rect.top};}canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const
+p=getPos(e);currentStroke={color:drawColor,size:4,points:[p,{x:p.x+0.1,y:p.y+0.1}]};strokes.push(currentStroke);redrawCanvas();});canvas.addEventListener('pointermove',e=>{if(!currentStroke)return;currentStroke.points.push(getPos(e));redrawCanvas();});canvas.addEventListener('pointerup',()=>{currentStroke=null;});canvas.addEventListener('pointercancel',()=>{currentStroke=null;});function
+undoStroke(){strokes.pop();redrawCanvas();}function
+clearCanvas(){strokes=[];bgImage=null;redrawCanvas();}function
+saveSketch(){const ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const
+btn=document.getElementById('saveSketchBtn');btn.disabled=true;canvas.toBlob(async(blob)=>{try{if(!blob)throw
+new Error('Ошибка рисунка');const mediaId=await
+uploadMediaBlob(blob,'sketch.png');const
+nextAtt=[...(ref.attachments||[]),{id:mediaId,type:'sketch'}];const
+updated=await
+saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);closeDrawModal();showToast('Набросок
+прикреплён');}catch(err){showToast(err.message);}finally{btn.disabled=false;}},'image/png');}document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!activeRefId)loadRefs(true);});loadRefs(true);"
+} ], "пошаговая_инструкция_подключения_к_netlify": [ "1. Зайдите в свой новый
+репозиторий на github.com -> нажмите Add file -> Create new file и создайте по
+очереди все 4 файла из списка выше (в имени 2-го и 3-го файла пишите прямо со
+слэшами: netlify/functions/transcribe.mjs и netlify/functions/api.mjs). После
+каждого нажимайте зелёную кнопку Commit changes.", "2. Откройте ваш Netlify
+(https://app.netlify.com/teams/artpavelalex-v-ilepa/projects) -> нажмите Add new
+project -> Import an existing project -> GitHub -> выберите ваш репозиторий и
+нажмите Deploy.", "3. Когда первый деплой завершится, откройте в Netlify слева
+Project configuration -> Environment variables -> Add a variable:", " — Ключ 1
+(обязательный): имя GROQ_API_KEY, значение — ваш ключ от Groq (вида gsk_...).",
+" — Ключ 2 (рекомендуемый, чтобы никто кроме вас не мог добавлять и удалять
+видео): имя ADMIN_PIN, значение — любой ваш 4-значный код (например, 4829).",
+"4. Обязательно зайдите в меню Deploys -> Trigger deploy -> Deploy project,
+чтобы Netlify подхватил добавленные ключи.", "5. По желанию в Domain management
+-> Options -> Edit project name задайте красивую бесплатную ссылку (например,
+dominoki-refs -> получите https://dominoki-refs.netlify.app)." ],
+"совет_для_заказчика": "Отправьте заказчику ссылку на сайт и
+попросите открыть её в обычном Safari (iPhone) или Chrome (Android) и нажать
+«Поделиться -> На экран Домой» — мини-приложение установится как иконка на
+телефон с розовым значком DM." }
