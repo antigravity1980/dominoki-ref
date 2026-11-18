@@ -78,7 +78,8 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
     <div class="ws-nav">
       <button onclick="goCatalog()">← Каталог</button>
       <span id="detailIdBadge">#</span>
-      <h2 id="detailTitle" style="margin:0;font-size:16px;font-weight:600;"></h2>
+      <span id="detailStatusPill" class="status-pill status-pending">Ждёт разбора</span>
+      <h2 id="detailTitle" style="margin:0;font-size:16px;font-weight:600;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;"></h2>
     </div>
     <div class="player-box">
       <iframe id="ytPlayer" src="" title="Видео" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
@@ -229,7 +230,7 @@ nextPending=refs.find(r=>r.status==='pending');if(nextPending)setTimeout(()=>ope
 compressImage(file,maxW,quality){return new Promise((resolve,reject)=>{const
 img=new Image();const
 objUrl=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(objUrl);let
-w=img.width;let h=img.height;if(w>maxW){h=Math.round(h(maxW/w));w=maxW;}const
+w=img.width;let h=img.height;if(w>maxW){h=Math.round(h*(maxW/w));w=maxW;}const
 c=document.createElement('canvas');c.width=w;c.height=h;const
 cctx=c.getContext('2d');cctx.fillStyle='#FFFFFF';cctx.fillRect(0,0,w,h);cctx.drawImage(img,0,0,w,h);c.toBlob(b=>b?resolve(b):reject(new
 Error('Ошибка\nсжатия')),'image/jpeg',quality);};img.onerror=()=>{URL.revokeObjectURL(objUrl);reject(new
@@ -292,7 +293,7 @@ drawColor='#EF4444';let bgImage=null;function
 openDrawModal(){document.getElementById('drawModal').classList.add('open');strokes=[];bgImage=null;requestAnimationFrame(resizeCanvas);}function
 closeDrawModal(){document.getElementById('drawModal').classList.remove('open');}function
 resizeCanvas(){const rect=canvas.parentElement.getBoundingClientRect();const
-dpr=window.devicePixelRatio||1;canvas.width=rect.widthdpr;canvas.height=rect.heightdpr;ctx.setTransform(dpr,0,0,dpr,0,0);redrawCanvas();}function
+dpr=window.devicePixelRatio||1;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);redrawCanvas();}function
 setColor(el){drawColor=el.dataset.color;document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('active'));el.classList.add('active');}function
 loadSketchBg(event){const
 file=event.target.files&&event.target.files[0];if(!file)return;const reader=new
@@ -301,8 +302,8 @@ Image();img.onload=()=>{bgImage=img;redrawCanvas();};img.src=e.target.result;};r
 redrawCanvas(){const
 rect=canvas.getBoundingClientRect();ctx.fillStyle='#FFFFFF';ctx.fillRect(0,0,rect.width,rect.height);if(bgImage){const
 scale=Math.min(rect.width/bgImage.width,rect.height/bgImage.height);const
-w=bgImage.widthscale;const
-h=bgImage.heightscale;ctx.drawImage(bgImage,(rect.width-w)/2,(rect.height-h)/2,w,h);}ctx.lineCap='round';ctx.lineJoin='round';strokes.forEach(s=>{if(!s.points.length)return;ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.beginPath();ctx.moveTo(s.points[0].x,s.points[0].y);for(let
+w=bgImage.width*scale;const
+h=bgImage.height*scale;ctx.drawImage(bgImage,(rect.width-w)/2,(rect.height-h)/2,w,h);}ctx.lineCap='round';ctx.lineJoin='round';strokes.forEach(s=>{if(!s.points.length)return;ctx.strokeStyle=s.color;ctx.lineWidth=s.size;ctx.beginPath();ctx.moveTo(s.points[0].x,s.points[0].y);for(let
 i=1;i<s.points.length;i++)ctx.lineTo(s.points[i].x,s.points[i].y);ctx.stroke();});}function
 getPos(e){const
 rect=canvas.getBoundingClientRect();return{x:e.clientX-rect.left,y:e.clientY-rect.top};}canvas.addEventListener('pointerdown',e=>{canvas.setPointerCapture(e.pointerId);const
