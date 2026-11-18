@@ -55,9 +55,9 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
       <div>Dominoki</div>
     </div>
     <div class="header-actions">
-      <button class="refresh-btn" title="Обновить" onclick="loadRefs()">↻</button>
-      <button class="btn btn-primary" id="addRefBtn" onclick="openAddModal()">+ Добавить видео</button>
-      <button class="btn btn-ghost" id="deleteRefBtn" onclick="deleteCurrentRef()" title="Удалить">Удалить</button>
+      <button class="role-btn" id="roleBtn" onclick="toggleRole()">Админ</button>
+      <button class="btn btn-primary hidden" id="addRefBtn" onclick="openAddModal()">+ Добавить видео</button>
+      <button class="btn btn-ghost hidden" id="deleteRefBtn" onclick="deleteCurrentRef()" title="Удалить">Удалить</button>
     </div>
   </header>
 
@@ -146,12 +146,11 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
 
   <script>
 let refs=[];let
-currentFilter='pending';let activeRefId=null;let isAdmin=true;let
+currentFilter='pending';let activeRefId=null;let isAdmin=false;let
 pinRequired=false;let
 savedPin=localStorage.getItem('dominoki_admin_pin')||'';let draftTimer=null;let
 mediaRecorder=null;let audioChunks=[];let audioStream=null;let
-isRecording=false;let recMaxTimer=null;function escapeHtml(str){return
-String(str||'').replaceAll('&','&').replaceAll('<','<').replaceAll('>','>').replaceAll(String.fromCharCode(34),'"');}function
+isRecording=false;let recMaxTimer=null;function escapeHtml(str){return String(str||'').replaceAll('&','&').replaceAll('<','<').replaceAll('>','>').replaceAll(String.fromCharCode(34),'"');}function
 showToast(msg){const
 el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(window._toastTimer);window._toastTimer=setTimeout(()=>el.classList.remove('show'),2600);}function
 extractYouTubeId(raw){try{const u=new URL(raw.trim());const
@@ -159,12 +158,10 @@ host=u.hostname.replace('www.','').replace('m.','');let
 id='';if(host==='youtu.be'){id=u.pathname.split('/').filter(Boolean)[0]||'';}else
 if(host==='youtube.com'||host==='music.youtube.com'){if(u.searchParams.get('v')){id=u.searchParams.get('v');}else{const
 parts=u.pathname.split('/').filter(Boolean);const
-idx=parts.findIndex(p=>['shorts','embed','live','v'].includes(p));if(idx!==-1&&parts[idx+1])id=parts[idx+1];}}id=id.slice(0,11);return
-id.length===11?id:null;}catch(e){return null;}}async function
+idx=parts.findIndex(p=>['shorts','embed','live','v'].includes(p));if(idx!==-1&&parts[idx+1])id=parts[idx+1];}}id=id.slice(0,11);return id.length===11?id:null;}catch(e){return null;}}async function
 loadRefs(silent){try{const res=await fetch('/.netlify/functions/api');const
 data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nзагрузки');refs=data.refs||[];pinRequired=Boolean(data.pinRequired);if(activeRefId){const
-current=refs.find(r=>r.id===activeRefId);if(current){updateDetailStatusUI(current);renderAttachments(current);renderQuickTabs();}else{goCatalog();}}else{renderCatalog();}if(!silent)showToast('Обновлено');}catch(err){if(!silent)showToast(err.message);}}async
-function
+current=refs.find(r=>r.id===activeRefId);if(current){updateDetailStatusUI(current);renderAttachments(current);renderQuickTabs();}else{goCatalog();}}else{renderCatalog();}if(!silent)showToast('Обновлено');}catch(err){if(!silent)showToast(err.message);}}async function
 toggleRole(){if(isAdmin){isAdmin=false;applyRoleUI();return;}if(!pinRequired){isAdmin=true;applyRoleUI();return;}let
 pin=savedPin;if(!pin){pin=prompt('Введите ПИН\nадминистратора:');if(pin===null)return;}try{const res=await
 fetch('/.netlify/functions/api?verifyPin=1',{headers:{'x-admin-pin':pin}});const
@@ -176,40 +173,37 @@ fetch('/.netlify/functions/api?verifyPin=1',{headers:{'x-admin-pin':retry}});con
 data2=await
 res2.json();if(data2.ok){savedPin=retry;localStorage.setItem('dominoki_admin_pin',retry);isAdmin=true;applyRoleUI();}else{showToast('Неверный\nПИН-код');}}}catch(err){showToast('Ошибка проверки ПИН');}}function
 applyRoleUI(){const
-btn=document.getElementById('roleBtn');btn.textContent=isAdmin?'Я\n(Админ)':'Заказчик';btn.classList.toggle('admin',isAdmin);document.getElementById('addRefBtn').classList.toggle('hidden',!isAdmin);document.getElementById('deleteRefBtn').classList.toggle('hidden',!isAdmin);}function
+btn=document.getElementById('roleBtn');btn.textContent=isAdmin?'Админ ✓':'Админ';btn.classList.toggle('admin',isAdmin);document.getElementById('addRefBtn').classList.toggle('hidden',!isAdmin);document.getElementById('deleteRefBtn').classList.toggle('hidden',!isAdmin);}function
 setFilter(filter){currentFilter=filter;document.querySelectorAll('.filter-tab').forEach(t=>t.classList.toggle('active',t.dataset.filter===filter));renderCatalog();}function
 getFilteredRefs(){const
-q=document.getElementById('searchInput').value.trim().toLowerCase();return
-refs.filter(r=>{const
+q=document.getElementById('searchInput').value.trim().toLowerCase();return refs.filter(r=>{const
 matchStatus=currentFilter==='all'||r.status===currentFilter;const
-matchQuery=!q||String(r.id).includes(q)||(r.title||'').toLowerCase().includes(q)||(r.folder||'').toLowerCase().includes(q);return
-matchStatus&&matchQuery;});}function renderCatalog(){const
+matchQuery=!q||String(r.id).includes(q)||(r.title||'').toLowerCase().includes(q)||(r.folder||'').toLowerCase().includes(q);return matchStatus&&matchQuery;});}function renderCatalog(){const
 pendingCount=refs.filter(r=>r.status==='pending').length;const
 doneCount=refs.filter(r=>r.status==='done').length;document.getElementById('cntPending').textContent=pendingCount;document.getElementById('cntDone').textContent=doneCount;document.getElementById('cntAll').textContent=refs.length;const
 list=getFilteredRefs();const
-container=document.getElementById('catalogList');if(!list.length){container.innerHTML=<div
+container=document.getElementById('catalogList');if(!list.length){container.innerHTML=`<div
 style='text-align:center;padding:40px 16px;color:var(--muted);'>Здесь пока
-пусто</div>;return;}container.innerHTML=list.map(r=>{const
+пусто</div>`;return;}container.innerHTML=list.map(r=>{const
 isDone=r.status==='done';const
 hasDraft=!isDone&&((r.comment||'').trim()||(r.attachments&&r.attachments.length));const
 statusText=isDone?'Обработано':(hasDraft?'Черновик':'Ждёт разбора');const
 statusClass=isDone?'status-done':'status-pending';const
-metaParts=[r.folder||'Без папки'];if(r.comment)metaParts.push('💬\n'+r.comment);if(r.attachments&&r.attachments.length)metaParts.push('📎\n'+r.attachments.length);return <div class='card ${isDone?'is-done':''}'
+metaParts=[r.folder||'Без папки'];if(r.comment)metaParts.push('💬\n'+r.comment);if(r.attachments&&r.attachments.length)metaParts.push('📎\n'+r.attachments.length);return `<div class='card ${isDone?'is-done':''}'
 onclick='openRef(${r.id})'><div class='thumb-wrap'><img
 src='https://img.youtube.com/vi/${escapeHtml(r.ytId)}/mqdefault.jpg' alt=''
 loading='lazy' /><span class='ref-id-badge'>#${r.id}</span></div><div
 class='card-body'><div class='card-top'><div
 class='card-title'>${escapeHtml(r.title)}</div><span class='status-pill\n${statusClass}'>${statusText}</span></div><div
-class='card-meta'>${escapeHtml(metaParts.join(' •\n'))}</div></div></div>;}).join('');}async function goCatalog(){await
-flushDraft();stopSpeechIfActive();activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();}async
-function openRef(id){if(activeRefId&&activeRefId!id)await
+class='card-meta'>${escapeHtml(metaParts.join(' •\n'))}</div></div></div>`;}).join('');}async function goCatalog(){await
+flushDraft();stopSpeechIfActive();activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();}async function openRef(id){if(activeRefId&&activeRefId!==id)await
 flushDraft();stopSpeechIfActive();activeRefId=id;const
 ref=refs.find(r=>r.id===id);if(!ref)return;document.getElementById('catalogView').classList.add('hidden');document.getElementById('detailView').classList.remove('hidden');renderQuickTabs();document.getElementById('detailIdBadge').textContent='#'+ref.id;document.getElementById('detailTitle').textContent=ref.title;document.getElementById('ytPlayer').src='https://www.youtube.com/embed/'+ref.ytId+'?playsinline=1&rel=0';const
 noteBox=document.getElementById('adminNoteBox');if(ref.adminNote){noteBox.textContent='От\nавтора:\n'+ref.adminNote;noteBox.classList.remove('hidden');}else{noteBox.classList.add('hidden');}document.getElementById('commentInput').value=ref.comment||'';document.getElementById('saveStateLabel').textContent='';updateDetailStatusUI(ref);renderAttachments(ref);window.scrollTo({top:0,behavior:'instant'});}function
 renderQuickTabs(){const
-list=getFilteredRefs();document.getElementById('quickTabs').innerHTML=list.map(r=><div
+list=getFilteredRefs();document.getElementById('quickTabs').innerHTML=list.map(r=>`<div
 class='q-tab ${r.id===activeRefId?'active':''}' onclick='openRef(${r.id})'><span
-class='q-dot ${r.status}'></span><span>#${r.id}</span></div>).join('');}function
+class='q-dot ${r.status}'></span><span>#${r.id}</span>`).join('');}function
 updateDetailStatusUI(ref){const
 pill=document.getElementById('detailStatusPill');const
 btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill\nstatus-done';btn.textContent='↺ Вернуть в доработку';btn.className='btn\nbtn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill\nstatus-pending';btn.textContent='✓ Готово / Отправить\nкомментарий';btn.className='btn btn-success';}}async function
@@ -217,13 +211,11 @@ saveRefPatch(id,patch){const
 label=document.getElementById('saveStateLabel');label.textContent='Сохраняется...';const
 res=await
 fetch('/.netlify/functions/api',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...patch})});const
-data=await res.json();if(!res.ok){label.textContent='Ошибка сохранения';throw
-new Error(data.error||'Ошибка сохранения');}const
-idx=refs.findIndex(r=>r.id===id);if(idx!-1)refs[idx]=data.ref;label.textContent='Сохранено\n✓';return data.ref;}function scheduleSaveDraft(){const
+data=await res.json();if(!res.ok){label.textContent='Ошибка сохранения';throw new Error(data.error||'Ошибка сохранения');}const
+idx=refs.findIndex(r=>r.id===id);if(idx!==-1)refs[idx]=data.ref;label.textContent='Сохранено\n✓';return data.ref;}function scheduleSaveDraft(){const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;document.getElementById('saveStateLabel').textContent='Печатает...';clearTimeout(draftTimer);const
 targetId=ref.id;const
-text=ref.comment;draftTimer=setTimeout(()=>saveRefPatch(targetId,{comment:text}).catch(e=>showToast(e.message)),700);}async
-function
+text=ref.comment;draftTimer=setTimeout(()=>saveRefPatch(targetId,{comment:text}).catch(e=>showToast(e.message)),700);}async function
 flushDraft(){if(!draftTimer||!activeRefId)return;clearTimeout(draftTimer);draftTimer=null;const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;await
 saveRefPatch(ref.id,{comment:ref.comment}).catch(()=>{});}async function
@@ -254,20 +246,19 @@ nextAtt=[...(ref.attachments||[]),{id:mediaId,type:'photo'}];const updated=await
 saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);}catch(err){showToast(err.message);}}}function
 renderAttachments(ref){const
 grid=document.getElementById('attachmentsGrid');const
-atts=ref.attachments||[];grid.innerHTML=atts.map((att,idx)=><div
+atts=ref.attachments||[];grid.innerHTML=atts.map((att,idx)=>`<div
 class='att-item'><img src='/.netlify/functions/api?media=${escapeHtml(att.id)}'
 onclick='openLightbox(this.src)' alt='' /><span
 class='att-badge'>${att.type==='sketch'?'Набросок':'Фото'}</span><button
 class='att-del'
-onclick='removeAttachment(${idx})'>×</button></div>).join('');}async function
+onclick='removeAttachment(${idx})'>×</button></div>`).join('');}async function
 removeAttachment(idx){const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const
-nextAtt=(ref.attachments||[]).filter((,i)=>i!==idx);try{const updated=await
+nextAtt=(ref.attachments||[]).filter((att,i)=>i!==idx);try{const updated=await
 saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);}catch(err){showToast(err.message);}}function
 openLightbox(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}function
 closeLightbox(){document.getElementById('lightbox').classList.remove('open');}function
-stopSpeechIfActive(){clearTimeout(recMaxTimer);if(mediaRecorder&&isRecording){try{mediaRecorder.stop();}catch(e){}}}async
-function toggleSpeech(){const micBtn=document.getElementById('micBtn');const
+stopSpeechIfActive(){clearTimeout(recMaxTimer);if(mediaRecorder&&isRecording){try{mediaRecorder.stop();}catch(e){}}}async function toggleSpeech(){const micBtn=document.getElementById('micBtn');const
 micLabel=document.getElementById('micLabel');if(isRecording&&mediaRecorder){clearTimeout(recMaxTimer);mediaRecorder.stop();return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){showToast('Микрофон\nнедоступен. Откройте сайт по HTTPS в Safari или\nChrome.');return;}try{audioStream=await
 navigator.mediaDevices.getUserMedia({audio:true});const
 preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];const
@@ -286,15 +277,13 @@ nl=String.fromCharCode(10);const sep=textarea.value&&!textarea.value.endsWith('\
 ref=refs.find(r=>r.id===activeRefId);if(ref){ref.comment=textarea.value;await
 saveRefPatch(ref.id,{comment:ref.comment});}}else{showToast('Речь не распознана,\nпопробуйте ещё раз');}}catch(err){showToast('Ошибка:\n'+err.message);}finally{micBtn.disabled=false;micLabel.textContent='Голос';}};mediaRecorder.start();isRecording=true;micBtn.classList.add('recording');micLabel.textContent='Говорите...\n(Стоп)';recMaxTimer=setTimeout(()=>{if(isRecording&&mediaRecorder)mediaRecorder.stop();},150000);}catch(err){showToast('Разрешите\nдоступ к микрофону в браузере');}}function
 openAddModal(){document.getElementById('addModal').classList.add('open');}function
-closeAddModal(){document.getElementById('addModal').classList.remove('open');}async
-function addReference(){const
+closeAddModal(){document.getElementById('addModal').classList.remove('open');}async function addReference(){const
 url=document.getElementById('newUrl').value.trim();const
 ytId=extractYouTubeId(url);if(!ytId){showToast('Укажите корректную ссылку на\nYouTube или Shorts');return;}const
 btn=document.getElementById('submitAddBtn');btn.disabled=true;try{const
 res=await
 fetch('/.netlify/functions/api',{method:'POST',headers:{'Content-Type':'application/json','x-admin-pin':savedPin},body:JSON.stringify({ytId,title:document.getElementById('newTitle').value.trim(),folder:document.getElementById('newFolder').value.trim(),adminNote:document.getElementById('newAdminNote').value.trim()})});const
-data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nдобавления');refs.unshift(data.ref);document.getElementById('newUrl').value='';document.getElementById('newTitle').value='';document.getElementById('newAdminNote').value='';closeAddModal();setFilter('pending');showToast('Добавлен\nреференс\n#'+data.ref.id);}catch(err){showToast(err.message);}finally{btn.disabled=false;}}async
-function deleteCurrentRef(){if(!confirm('Удалить этот референс\nбезвозвратно?'))return;try{const res=await
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nдобавления');refs.unshift(data.ref);document.getElementById('newUrl').value='';document.getElementById('newTitle').value='';document.getElementById('newAdminNote').value='';closeAddModal();setFilter('pending');showToast('Добавлен\nреференс\n#'+data.ref.id);}catch(err){showToast(err.message);}finally{btn.disabled=false;}}async function deleteCurrentRef(){if(!confirm('Удалить этот референс\nбезвозвратно?'))return;try{const res=await
 fetch('/.netlify/functions/api?id='+activeRefId,{method:'DELETE',headers:{'x-admin-pin':savedPin}});const
 data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nудаления');refs=refs.filter(r=>r.id!==activeRefId);activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();showToast('Удалено');}catch(err){showToast(err.message);}}const
 canvas=document.getElementById('sketchCanvas');const
@@ -321,11 +310,11 @@ p=getPos(e);currentStroke={color:drawColor,size:4,points:[p,{x:p.x+0.1,y:p.y+0.1
 undoStroke(){strokes.pop();redrawCanvas();}function
 clearCanvas(){strokes=[];bgImage=null;redrawCanvas();}function
 saveSketch(){const ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const
-btn=document.getElementById('saveSketchBtn');btn.disabled=true;canvas.toBlob(async(blob)=>{try{if(!blob)throw
-new Error('Ошибка рисунка');const mediaId=await
+btn=document.getElementById('saveSketchBtn');btn.disabled=true;canvas.toBlob(async(blob)=>{try{if(!blob)throw new Error('Ошибка рисунка');const mediaId=await
 uploadMediaBlob(blob,'sketch.png');const
 nextAtt=[...(ref.attachments||[]),{id:mediaId,type:'sketch'}];const
 updated=await
-saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);closeDrawModal();showToast('Набросок\nприкреплён');}catch(err){showToast(err.message);}finally{btn.disabled=false;}},'image/png');}document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!activeRefId)loadRefs(true);  </script>
+saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);closeDrawModal();showToast('Набросок\nприкреплён');}catch(err){showToast(err.message);}finally{btn.disabled=false;}},'image/png');}document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!activeRefId)loadRefs(true);});
+loadRefs(true);</script>
 </body>
 </html>
