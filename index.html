@@ -10,9 +10,9 @@
 UI',Roboto,sans-serif;background:var(--bg);color:var(--text);line-height:1.4;touch-action:manipulation;}.app{max-width:520px;margin:0
 auto;min-height:100dvh;background:var(--bg);display:flex;flex-direction:column;padding-bottom:24px;}.header{position:sticky;top:0;z-index:20;background:rgba(255,255,255,0.95);backdrop-filter:blur(10px);border-bottom:2px
 solid
-var(--primary);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}.brand{font-weight:700;font-size:16px;display:flex;align-items:center;gap:10px;min-width:0;}.brand-logo{width:28px;height:28px;border-radius:50%;background:#FFFFFF;border:2px
+var(--primary);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:8px;}.brand{font-weight:700;font-size:16px;display:flex;align-items:center;gap:10px;min-width:0;}.brand>div:last-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;}.brand-logo{width:28px;height:28px;border-radius:50%;background:#FFFFFF;border:2px
 solid var(--primary-plum);box-shadow:0 0 0 3px
-var(--ring-blue);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--primary);letter-spacing:-0.5px;flex-shrink:0;}.header-actions{display:flex;align-items:center;gap:6px;flex-shrink:0;}.refresh-btn{width:32px;height:32px;border-radius:50%;border:1px
+var(--ring-blue);display:inline-flex;align-items:center;justify-content:center;font-size:11px;font-weight:900;color:var(--primary);letter-spacing:-0.5px;flex-shrink:0;}.header-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end;}.refresh-btn{width:32px;height:32px;border-radius:50%;border:1px
 solid
 var(--border);background:var(--surface);cursor:pointer;font-size:15px;display:inline-flex;align-items:center;justify-content:center;}.role-btn{font-size:12px;font-weight:600;padding:6px 10px;border-radius:20px;border:1px
 solid
@@ -56,9 +56,8 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
     </div>
     <div class="header-actions">
       <button class="refresh-btn" title="Обновить" onclick="loadRefs()">↻</button>
-      <button class="role-btn" id="roleBtn" onclick="toggleRole()">Заказчик</button>
-      <button class="btn btn-primary" id="addRefBtn" onclick="openAddModal()">+ Видео</button>
-      <button class="btn btn-ghost" id="deleteRefBtn" onclick="deleteCurrentRef()" title="Удалить">(Админ)</button>
+      <button class="btn btn-primary" id="addRefBtn" onclick="openAddModal()">+ Добавить видео</button>
+      <button class="btn btn-ghost" id="deleteRefBtn" onclick="deleteCurrentRef()" title="Удалить">Удалить</button>
     </div>
   </header>
 
@@ -147,7 +146,7 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
 
   <script>
 let refs=[];let
-currentFilter='pending';let activeRefId=null;let isAdmin=false;let
+currentFilter='pending';let activeRefId=null;let isAdmin=true;let
 pinRequired=false;let
 savedPin=localStorage.getItem('dominoki_admin_pin')||'';let draftTimer=null;let
 mediaRecorder=null;let audioChunks=[];let audioStream=null;let
