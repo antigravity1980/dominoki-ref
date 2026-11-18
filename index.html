@@ -258,6 +258,8 @@ body{
 .lightbox{position:fixed;inset:0;z-index:70;background:rgba(6,7,10,0.93);display:none;align-items:center;justify-content:center;padding:16px;}
 .lightbox.open{display:flex;}
 .lightbox img{max-width:100%;max-height:90dvh;border-radius:16px;box-shadow:0 30px 80px rgba(0,0,0,0.7);}
+.role-btn.login-active{background:linear-gradient(135deg,#34D399,#10B981);color:#052E1E;border-color:transparent;box-shadow:0 6px 18px rgba(52,211,153,0.35);}
+#commentInput:disabled{opacity:0.5;cursor:not-allowed;background:#0F1219;}
 .hidden{display:none!important;}
 .toast{
   position:fixed;bottom:58px;left:50%;transform:translateX(-50%);
@@ -275,6 +277,7 @@ body{
     <div class="brand"><img src="logo.png" alt="Dominoki"></div>
     <div class="header-actions">
       <button class="role-btn" id="roleBtn" onclick="toggleRole()">Админ</button>
+      <button class="role-btn" id="loginBtn" onclick="toggleLogin()">Вход</button>
       <button class="btn btn-primary hidden" id="addRefBtn" onclick="openAddModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Добавить видео</button>
       <button class="btn btn-ghost hidden" id="deleteRefBtn" onclick="deleteCurrentRef()" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Удалить</button>
     </div>
@@ -363,7 +366,7 @@ body{
 
   <div id="pinModal" class="modal-backdrop">
     <div class="modal-sheet" style="max-width:340px;">
-      <div style="font-weight:700;font-size:16px;">Введите ПИН администратора</div>
+      <div id="pinTitle" style="font-weight:700;font-size:16px;">Введите ПИН администратора</div>
       <input id="pinInput" class="input" type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="••••" onkeydown="if(event.key==='Enter')submitPin()">
       <div class="tools-bar" style="margin-top:6px;">
         <button class="btn btn-ghost" onclick="closePinModal()">Отмена</button>
@@ -380,7 +383,7 @@ body{
 
   <script>
 let refs=[];let
-currentFilter='pending';let activeRefId=null;let isAdmin=false;let
+currentFilter='pending';let activeRefId=null;let isAdmin=false;let pinMode='admin';let userLoggedIn=sessionStorage.getItem('dm_user')==='1';let userPin=sessionStorage.getItem('dm_user_pin')||'';let
 pinRequired=true;let
 savedPin=localStorage.getItem('dominoki_admin_pin')||'';let draftTimer=null;let numTimer=null;let
 mediaRecorder=null;let audioChunks=[];let audioStream=null;let
@@ -395,7 +398,7 @@ parts=u.pathname.split('/').filter(Boolean);const
 idx=parts.findIndex(p=>['shorts','embed','live','v'].includes(p));if(idx!==-1&&parts[idx+1])id=parts[idx+1];}}id=id.slice(0,11);return id.length===11?id:null;}catch(e){return null;}}async function
 loadRefs(silent){try{const res=await fetch('/.netlify/functions/api');const
 data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nзагрузки');refs=data.refs||[];pinRequired=Boolean(data.pinRequired);if(activeRefId){const
-current=refs.find(r=>r.id===activeRefId);if(current){updateDetailStatusUI(current);renderAttachments(current);renderQuickTabs();}else{goCatalog();}}else{renderCatalog();}if(!silent)showToast('Обновлено');}catch(err){if(!silent)showToast(err.message);}}async function tryVerifyPin(pin){try{const res=await fetch('/.netlify/functions/api?verifyPin=1',{headers:{'x-admin-pin':pin}});const data=await res.json();if(data.ok){savedPin=pin;localStorage.setItem('dominoki_admin_pin',pin);isAdmin=true;applyRoleUI();return true;}return false;}catch(err){showToast('Ошибка проверки ПИН');return false;}}function toggleRole(){if(isAdmin){isAdmin=false;applyRoleUI();return;}if(!pinRequired){isAdmin=true;applyRoleUI();return;}if(savedPin){tryVerifyPin(savedPin).then(ok=>{if(!ok){savedPin='';localStorage.removeItem('dominoki_admin_pin');openPinModal();}});return;}openPinModal();}function openPinModal(){document.getElementById('pinModal').classList.add('open');const inp=document.getElementById('pinInput');inp.value='';setTimeout(function(){inp.focus();},80);}function closePinModal(){document.getElementById('pinModal').classList.remove('open');}async function submitPin(){const inp=document.getElementById('pinInput');const pin=inp.value.trim();if(!pin){showToast('Введите ПИН');return;}const ok=await tryVerifyPin(pin);if(ok){closePinModal();showToast('Режим администратора включён');}else{localStorage.removeItem('dominoki_admin_pin');savedPin='';inp.value='';showToast('Неверный ПИН-код');inp.focus();}}function applyRoleUI(){const
+current=refs.find(r=>r.id===activeRefId);if(current){updateDetailStatusUI(current);renderAttachments(current);renderQuickTabs();}else{goCatalog();}}else{renderCatalog();}if(!silent)showToast('Обновлено');}catch(err){if(!silent)showToast(err.message);}}async function tryVerifyPin(pin){try{const res=await fetch('/.netlify/functions/api?verifyPin=1',{headers:{'x-admin-pin':pin}});const data=await res.json();if(data.ok){savedPin=pin;localStorage.setItem('dominoki_admin_pin',pin);isAdmin=true;applyRoleUI();return true;}return false;}catch(err){showToast('Ошибка проверки ПИН');return false;}}function toggleRole(){if(isAdmin){isAdmin=false;applyRoleUI();return;}if(!pinRequired){isAdmin=true;applyRoleUI();return;}if(savedPin){tryVerifyPin(savedPin).then(ok=>{if(!ok){savedPin='';localStorage.removeItem('dominoki_admin_pin');openPinModal();}});return;}openPinModal('admin');}function openPinModal(mode){pinMode=mode||'admin';document.getElementById('pinTitle').textContent=pinMode==='user'?'Введите пинкод для входа':'Введите ПИН администратора';document.getElementById('pinModal').classList.add('open');const inp=document.getElementById('pinInput');inp.value='';setTimeout(function(){inp.focus();},80);}function closePinModal(){document.getElementById('pinModal').classList.remove('open');}function toggleLogin(){if(userLoggedIn){userLoggedIn=false;userPin='';sessionStorage.removeItem('dm_user');sessionStorage.removeItem('dm_user_pin');applyLoginUI();showToast('Вы вышли');return;}openPinModal('user');}function applyLoginUI(){const btn=document.getElementById('loginBtn');btn.textContent=userLoggedIn?'Вы вошли':'Вход';btn.classList.toggle('login-active',userLoggedIn);const ci=document.getElementById('commentInput');ci.disabled=!userLoggedIn;ci.placeholder=userLoggedIn?'Комментарий / что изменить:':'Войдите по пинкоду, чтобы писать комменфарии';}async function submitPin(){const inp=document.getElementById('pinInput');const pin=inp.value.trim();if(!pin){showToast('Введите пинкод');return;}if(pinMode==='user'){if(pin==='2026'){userLoggedIn=true;userPin=pin;sessionStorage.setItem('dm_user','1');sessionStorage.setItem('dm_user_pin',pin);applyLoginUI();closePinModal();showToast('Вход выполнен');}else{inp.value='';showToast('Неверный пинкод');inp.focus();}return;}const ok=await tryVerifyPin(pin);if(ok){closePinModal();showToast('Режим администратора включён');}else{localStorage.removeItem('dominoki_admin_pin');savedPin='';inp.value='';showToast('Неверный ПИН-код');inp.focus();}}function applyRoleUI(){const
 btn=document.getElementById('roleBtn');btn.textContent=isAdmin?'Админ ✓':'Админ';btn.classList.toggle('admin',isAdmin);document.getElementById('addRefBtn').classList.toggle('hidden',!isAdmin);document.getElementById('deleteRefBtn').classList.toggle('hidden',!isAdmin);document.querySelectorAll('.admin-only').forEach(function(el){el.classList.toggle('hidden',!isAdmin);});}function
 setFilter(filter){currentFilter=filter;document.querySelectorAll('.filter-tab').forEach(t=>t.classList.toggle('active',t.dataset.filter===filter));renderCatalog();}function
 getFilteredRefs(){const
@@ -433,7 +436,7 @@ btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textCont
 saveRefPatch(id,patch){const
 label=document.getElementById('saveStateLabel');label.textContent='Сохраняется...';const
 res=await
-fetch('/.netlify/functions/api',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,...patch})});const
+fetch('/.netlify/functions/api',{method:'PUT',headers:{'Content-Type':'application/json','x-user-pin':userPin,'x-admin-pin':savedPin},body:JSON.stringify({id,...patch})});const
 data=await res.json();if(!res.ok){label.textContent='Ошибка сохранения';throw new Error(data.error||'Ошибка сохранения');}const
 idx=refs.findIndex(r=>r.id===id);if(idx!==-1)refs[idx]=data.ref;label.textContent='Сохранено\n✓';return data.ref;}function scheduleSaveDraft(){const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;document.getElementById('saveStateLabel').textContent='Печатает...';clearTimeout(draftTimer);const
@@ -442,7 +445,7 @@ text=ref.comment;draftTimer=setTimeout(()=>saveRefPatch(targetId,{comment:text})
 flushDraft(){if(!draftTimer||!activeRefId)return;clearTimeout(draftTimer);draftTimer=null;const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;await
 saveRefPatch(ref.id,{comment:ref.comment}).catch(()=>{});}async function
-toggleComplete(){const
+toggleComplete(){if(!userLoggedIn){showToast('Нажмите «Вход» по пинкоду');return;}const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;clearTimeout(draftTimer);draftTimer=null;const
 nextStatus=ref.status==='done'?'pending':'done';const
 commentText=document.getElementById('commentInput').value;ref.comment=commentText;try{const
@@ -459,8 +462,8 @@ Error('Ошибка\nсжатия')),'image/jpeg',quality);};img.onerror=()=>{UR
 Error('Не удалось открыть фото'));};img.src=objUrl;});}async function
 uploadMediaBlob(blob,name){const fd=new
 FormData();fd.append('file',blob,name);const res=await
-fetch('/.netlify/functions/api?media=1',{method:'POST',body:fd});const
-data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка загрузки\nфото');return data.id;}async function handleFiles(event){const
+fetch('/.netlify/functions/api?media=1',{method:'POST',headers:{'x-user-pin':userPin,'x-admin-pin':savedPin},body:fd});const
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка загрузки\nфото');return data.id;}async function handleFiles(event){if(!userLoggedIn){showToast('Нажмите «Вход» по пинкоду');return;}const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const
 files=Array.from(event.target.files||[]);event.target.value='';if(!files.length)return;showToast('Загрузка\nфото...');for(const file of files){try{const compressed=await
 compressImage(file,1280,0.8);const mediaId=await
@@ -481,7 +484,7 @@ nextAtt=(ref.attachments||[]).filter((att,i)=>i!==idx);try{const updated=await
 saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);}catch(err){showToast(err.message);}}function
 openLightbox(src){document.getElementById('lightboxImg').src=src;document.getElementById('lightbox').classList.add('open');}function
 closeLightbox(){document.getElementById('lightbox').classList.remove('open');}function
-stopSpeechIfActive(){clearTimeout(recMaxTimer);if(mediaRecorder&&isRecording){try{mediaRecorder.stop();}catch(e){}}}async function toggleSpeech(){const micBtn=document.getElementById('micBtn');const
+stopSpeechIfActive(){clearTimeout(recMaxTimer);if(mediaRecorder&&isRecording){try{mediaRecorder.stop();}catch(e){}}}async function toggleSpeech(){if(!userLoggedIn){showToast('Нажмите «Вход» по пинкоду');return;}const micBtn=document.getElementById('micBtn');const
 micLabel=document.getElementById('micLabel');if(isRecording&&mediaRecorder){clearTimeout(recMaxTimer);mediaRecorder.stop();return;}if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia||!window.MediaRecorder){showToast('Микрофон\nнедоступен. Откройте сайт по HTTPS в Safari или\nChrome.');return;}try{audioStream=await
 navigator.mediaDevices.getUserMedia({audio:true});const
 preferred=['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus'];const
@@ -512,7 +515,7 @@ data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nуд
 canvas=document.getElementById('sketchCanvas');const
 ctx=canvas.getContext('2d');let strokes=[];let currentStroke=null;let
 drawColor='#EF4444';let bgImage=null;function
-openDrawModal(){document.getElementById('drawModal').classList.add('open');strokes=[];bgImage=null;requestAnimationFrame(resizeCanvas);}function
+openDrawModal(){if(!userLoggedIn){showToast('Нажмите «Вход» по пинкоду');return;}document.getElementById('drawModal').classList.add('open');strokes=[];bgImage=null;requestAnimationFrame(resizeCanvas);}function
 closeDrawModal(){document.getElementById('drawModal').classList.remove('open');}function
 resizeCanvas(){const rect=canvas.parentElement.getBoundingClientRect();const
 dpr=window.devicePixelRatio||1;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);redrawCanvas();}function
@@ -538,6 +541,6 @@ uploadMediaBlob(blob,'sketch.png');const
 nextAtt=[...(ref.attachments||[]),{id:mediaId,type:'sketch'}];const
 updated=await
 saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);closeDrawModal();showToast('Набросок\nприкреплён');}catch(err){showToast(err.message);}finally{btn.disabled=false;}},'image/png');}document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!activeRefId)loadRefs(true);});
-loadRefs(true);</script>
+applyLoginUI();loadRefs(true);</script>
 </body>
 </html>
