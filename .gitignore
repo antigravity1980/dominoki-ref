@@ -1,2 +1,4 @@
 *.jpg
 current_inline.js
+data/
+.env
