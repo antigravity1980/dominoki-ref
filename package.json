@@ -1,0 +1,8 @@
+{
+  "name": "dominoki-refs",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@netlify/blobs": "^11.1.3"
+  }
+}
