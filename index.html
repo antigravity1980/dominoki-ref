@@ -85,7 +85,7 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
     </div>
     <div id="adminNoteBox" class="admin-note hidden"></div>
     <div class="editor-card">
-      <div class="editor-head"><span id="saveStateLabel"></span></div>
+      <div class="editor-head"><label class="admin-only hidden" style="display:flex;align-items:center;gap:6px;font-weight:600;">Номер <input id="numInput" class="input" style="width:96px;padding:6px 8px;" placeholder="001" oninput="scheduleNumSave()"></label><span id="saveStateLabel"></span></div>
       <textarea id="commentInput" placeholder="Комментарий / что изменить:" oninput="scheduleSaveDraft()"></textarea>
       <div class="tools-bar">
         <button class="icon-btn" id="micBtn" onclick="toggleSpeech()" title="Голос"><span id="micLabel">🤺 Голос</span></button>
@@ -104,6 +104,7 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
     <div class="modal-sheet">
       <div style="font-weight:700;font-size:16px;margin-bottom:10px;">Новый видеореференс</div>
       <input id="newUrl" class="input" placeholder="Ссылка на YouTube / Shorts">
+      <input id="newNum" class="input" placeholder="Номер (напр. 001)">
       <input id="newTitle" class="input" placeholder="Название">
       <input id="newFolder" class="input" placeholder="Папка (напр. Партия #1)">
       <input id="newAdminNote" class="input" placeholder="Заметка админа">
@@ -158,7 +159,7 @@ img{max-width:100%;max-height:90dvh;border-radius:10px;}.hidden{display:none!imp
 let refs=[];let
 currentFilter='pending';let activeRefId=null;let isAdmin=false;let
 pinRequired=true;let
-savedPin=localStorage.getItem('dominoki_admin_pin')||'';let draftTimer=null;let
+savedPin=localStorage.getItem('dominoki_admin_pin')||'';let draftTimer=null;let numTimer=null;let
 mediaRecorder=null;let audioChunks=[];let audioStream=null;let
 isRecording=false;let recMaxTimer=null;function escapeHtml(str){return String(str||'').replaceAll('&','&').replaceAll('<','<').replaceAll('>','>').replaceAll(String.fromCharCode(34),'"');}function
 showToast(msg){const
@@ -177,7 +178,7 @@ setFilter(filter){currentFilter=filter;document.querySelectorAll('.filter-tab').
 getFilteredRefs(){const
 q=document.getElementById('searchInput').value.trim().toLowerCase();return refs.filter(r=>{const
 matchStatus=currentFilter==='all'||r.status===currentFilter;const
-matchQuery=!q||String(r.id).includes(q)||(r.title||'').toLowerCase().includes(q)||(r.folder||'').toLowerCase().includes(q);return matchStatus&&matchQuery;});}function renderCatalog(){const
+matchQuery=!q||String(r.id).includes(q)||(r.num||'').toLowerCase().includes(q)||(r.title||'').toLowerCase().includes(q)||(r.folder||'').toLowerCase().includes(q);return matchStatus&&matchQuery;});}function renderCatalog(){const
 pendingCount=refs.filter(r=>r.status==='pending').length;const
 doneCount=refs.filter(r=>r.status==='done').length;document.getElementById('cntPending').textContent=pendingCount;document.getElementById('cntDone').textContent=doneCount;document.getElementById('cntAll').textContent=refs.length;const
 list=getFilteredRefs();const
@@ -191,18 +192,18 @@ statusClass=isDone?'status-done':'status-pending';const
 metaParts=[r.folder||'Без папки'];if(r.comment)metaParts.push('💬\n'+r.comment);if(r.attachments&&r.attachments.length)metaParts.push('📎\n'+r.attachments.length);return `<div class='card ${isDone?'is-done':''}'
 onclick='openRef(${r.id})'><div class='thumb-wrap'><img
 src='https://img.youtube.com/vi/${escapeHtml(r.ytId)}/mqdefault.jpg' alt=''
-loading='lazy' /><span class='ref-id-badge'>#${r.id}</span></div><div
+loading='lazy' /><span class='ref-id-badge'>#${escapeHtml(r.num || r.id)}</span></div><div
 class='card-body'><div class='card-top'><div
 class='card-title'>${escapeHtml(r.title)}</div><span class='status-pill\n${statusClass}'>${statusText}</span></div><div
 class='card-meta'>${escapeHtml(metaParts.join(' •\n'))}</div></div></div>`;}).join('');}async function goCatalog(){await
 flushDraft();stopSpeechIfActive();activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();}async function openRef(id){if(activeRefId&&activeRefId!==id)await
 flushDraft();stopSpeechIfActive();activeRefId=id;const
-ref=refs.find(r=>r.id===id);if(!ref)return;document.getElementById('catalogView').classList.add('hidden');document.getElementById('detailView').classList.remove('hidden');renderQuickTabs();document.getElementById('detailIdBadge').textContent='#'+ref.id;document.getElementById('detailTitle').textContent=ref.title;document.getElementById('ytPlayer').src='https://www.youtube.com/embed/'+ref.ytId+'?playsinline=1&rel=0';const
-noteBox=document.getElementById('adminNoteBox');if(ref.adminNote){noteBox.textContent='От\nавтора:\n'+ref.adminNote;noteBox.classList.remove('hidden');}else{noteBox.classList.add('hidden');}document.getElementById('commentInput').value=ref.comment||'';document.getElementById('saveStateLabel').textContent='';updateDetailStatusUI(ref);renderAttachments(ref);window.scrollTo({top:0,behavior:'instant'});}function
+ref=refs.find(r=>r.id===id);if(!ref)return;document.getElementById('catalogView').classList.add('hidden');document.getElementById('detailView').classList.remove('hidden');renderQuickTabs();document.getElementById('detailIdBadge').textContent='#'+(ref.num||ref.id);document.getElementById('detailTitle').textContent=ref.title;document.getElementById('ytPlayer').src='https://www.youtube.com/embed/'+ref.ytId+'?playsinline=1&rel=0';const
+noteBox=document.getElementById('adminNoteBox');if(ref.adminNote){noteBox.textContent='От\nавтора:\n'+ref.adminNote;noteBox.classList.remove('hidden');}else{noteBox.classList.add('hidden');}document.getElementById('commentInput').value=ref.comment||'';document.getElementById('numInput').value=ref.num||'';document.getElementById('saveStateLabel').textContent='';updateDetailStatusUI(ref);renderAttachments(ref);window.scrollTo({top:0,behavior:'instant'});}function
 renderQuickTabs(){const
 list=getFilteredRefs();document.getElementById('quickTabs').innerHTML=list.map(r=>`<div
 class='q-tab ${r.id===activeRefId?'active':''}' onclick='openRef(${r.id})'><span
-class='q-dot ${r.status}'></span><span>#${r.id}</span>`).join('');}function
+class='q-dot ${r.status}'></span><span>#${escapeHtml(r.num || r.id)}</span>`).join('');}function
 updateDetailStatusUI(ref){const
 pill=document.getElementById('detailStatusPill');const
 btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill\nstatus-done';btn.textContent='↺ Вернуть в доработку';btn.className='btn\nbtn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill\nstatus-pending';btn.textContent='✓ Готово / Отправить\nкомментарий';btn.className='btn btn-success';}}async function
@@ -214,7 +215,7 @@ data=await res.json();if(!res.ok){label.textContent='Ошибка сохране
 idx=refs.findIndex(r=>r.id===id);if(idx!==-1)refs[idx]=data.ref;label.textContent='Сохранено\n✓';return data.ref;}function scheduleSaveDraft(){const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;document.getElementById('saveStateLabel').textContent='Печатает...';clearTimeout(draftTimer);const
 targetId=ref.id;const
-text=ref.comment;draftTimer=setTimeout(()=>saveRefPatch(targetId,{comment:text}).catch(e=>showToast(e.message)),700);}async function
+text=ref.comment;draftTimer=setTimeout(()=>saveRefPatch(targetId,{comment:text}).catch(e=>showToast(e.message)),700);}function scheduleNumSave(){const ref=refs.find(r=>r.id===activeRefId);if(!ref)return;const v=document.getElementById('numInput').value.trim();clearTimeout(numTimer);numTimer=setTimeout(()=>{saveRefPatch(ref.id,{num:v}).then(()=>{renderQuickTabs();}).catch(e=>showToast(e.message));},700);}async function
 flushDraft(){if(!draftTimer||!activeRefId)return;clearTimeout(draftTimer);draftTimer=null;const
 ref=refs.find(r=>r.id===activeRefId);if(!ref)return;ref.comment=document.getElementById('commentInput').value;await
 saveRefPatch(ref.id,{comment:ref.comment}).catch(()=>{});}async function
@@ -281,8 +282,8 @@ url=document.getElementById('newUrl').value.trim();const
 ytId=extractYouTubeId(url);if(!ytId){showToast('Укажите корректную ссылку на\nYouTube или Shorts');return;}const
 btn=document.getElementById('submitAddBtn');btn.disabled=true;try{const
 res=await
-fetch('/.netlify/functions/api',{method:'POST',headers:{'Content-Type':'application/json','x-admin-pin':savedPin},body:JSON.stringify({ytId,title:document.getElementById('newTitle').value.trim(),folder:document.getElementById('newFolder').value.trim(),adminNote:document.getElementById('newAdminNote').value.trim()})});const
-data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nдобавления');refs.unshift(data.ref);document.getElementById('newUrl').value='';document.getElementById('newTitle').value='';document.getElementById('newAdminNote').value='';closeAddModal();setFilter('pending');showToast('Добавлен\nреференс\n#'+data.ref.id);}catch(err){showToast(err.message);}finally{btn.disabled=false;}}async function deleteCurrentRef(){if(!confirm('Удалить этот референс\nбезвозвратно?'))return;try{const res=await
+fetch('/.netlify/functions/api',{method:'POST',headers:{'Content-Type':'application/json','x-admin-pin':savedPin},body:JSON.stringify({ytId,num:document.getElementById('newNum').value.trim(),title:document.getElementById('newTitle').value.trim(),folder:document.getElementById('newFolder').value.trim(),adminNote:document.getElementById('newAdminNote').value.trim()})});const
+data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nдобавления');refs.unshift(data.ref);document.getElementById('newUrl').value='';document.getElementById('newTitle').value='';document.getElementById('newAdminNote').value='';document.getElementById('newNum').value='';closeAddModal();setFilter('pending');showToast('Добавлен\nреференс\n#'+data.ref.id);}catch(err){showToast(err.message);}finally{btn.disabled=false;}}async function deleteCurrentRef(){if(!confirm('Удалить этот референс\nбезвозвратно?'))return;try{const res=await
 fetch('/.netlify/functions/api?id='+activeRefId,{method:'DELETE',headers:{'x-admin-pin':savedPin}});const
 data=await res.json();if(!res.ok)throw new Error(data.error||'Ошибка\nудаления');refs=refs.filter(r=>r.id!==activeRefId);activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();showToast('Удалено');}catch(err){showToast(err.message);}}const
 canvas=document.getElementById('sketchCanvas');const
