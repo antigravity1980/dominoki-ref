@@ -24,6 +24,7 @@ const PORT = Number(process.env.PORT || 3000);
 const STATIC = {
   '/': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/index.html': { file: 'index.html', type: 'text/html; charset=utf-8' },
+  '/vhod': { file: 'index.html', type: 'text/html; charset=utf-8' },
   '/logo.png': { file: 'logo.png', type: 'image/png' },
   '/favicon.png': { file: 'favicon.png', type: 'image/png' },
 };
