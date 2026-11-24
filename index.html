@@ -538,6 +538,6 @@ nextAtt=[...(ref.attachments||[]),{id:mediaId,type:'sketch'}];const
 updated=await
 saveRefPatch(ref.id,{attachments:nextAtt});renderAttachments(updated);closeDrawModal();showToast('Набросок\nприкреплён');}catch(err){showToast(err.message);}finally{btn.disabled=false;}},'image/png');}document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!activeRefId)loadRefs(true);});
 if(location.pathname==='/vhod'){if(savedPin){tryVerifyPin(savedPin).then(ok=>{if(!ok){savedPin='';localStorage.removeItem('dominoki_admin_pin');openPinModal('admin');}});}else{openPinModal('admin');}}
-applyLoginUI();loadRefs(true);</script>
+applyLoginUI();applyRoleUI();loadRefs(true);</script>
 </body>
 </html>
