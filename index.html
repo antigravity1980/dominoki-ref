@@ -38,7 +38,7 @@ body{
   padding:12px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px;
 }
 .brand{display:flex;align-items:center;min-width:0;}
-.brand img{height:46px;display:block;filter:drop-shadow(0 5px 14px rgba(246,38,154,0.3));}
+
 .header-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end;}
 .role-btn{
   font-size:13px;font-weight:700;padding:9px 16px;border-radius:999px;
@@ -173,19 +173,20 @@ body{
 }
 .editor-head{
   display:flex;justify-content:space-between;align-items:center;gap:10px;
-  font-size:13px;font-weight:600;color:var(--muted);min-height:36px;
+  font-size:13px;font-weight:600;color:var(--muted);min-height:0;
 }
 #commentInput{
-  width:100%;min-height:120px;border:1px solid var(--border);border-radius:14px;
+  width:100%;min-height:92px;border:1px solid var(--border);border-radius:14px;
   padding:12px 14px;background:var(--field);color:var(--text);
   font-family:inherit;font-size:15px;resize:vertical;outline:none;
   transition:border-color .15s, box-shadow .15s;line-height:1.5;
 }
 #commentInput::placeholder{color:#6C7486;}
 #commentInput:focus{border-color:var(--primary);box-shadow:0 0 0 3px rgba(246,38,154,0.18);}
-.tools-bar{display:flex;align-items:center;gap:9px;flex-wrap:wrap;}
+.tools-bar{display:flex;align-items:stretch;gap:8px;flex-wrap:wrap;}
+.tools-bar > *{flex:1 1 0;min-width:0;justify-content:center;}
 .icon-btn{
-  height:44px;padding:0 15px;border-radius:14px;border:1px solid var(--border);
+  height:44px;padding:0 10px;border-radius:14px;border:1px solid var(--border);
   background:var(--surface-2);color:var(--text);font-size:14px;font-weight:700;
   display:inline-flex;align-items:center;gap:8px;cursor:pointer;transition:all .15s;
   user-select:none;text-decoration:none;
@@ -274,7 +275,6 @@ body{
 <body>
 <div class="app">
   <header class="header">
-    <div class="brand"><img src="logo.png" alt="Dominoki"></div>
     <div class="header-actions">
       <button class="btn btn-primary hidden" id="addRefBtn" onclick="openAddModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14"/><path d="M12 5v14"/></svg> Добавить видео</button>
       <button class="btn btn-ghost hidden" id="deleteRefBtn" onclick="deleteCurrentRef()" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Удалить</button>
@@ -315,7 +315,7 @@ body{
         <button class="icon-btn" id="micBtn" onclick="toggleSpeech()" title="Голос"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg> <span id="micLabel">Голос</span></button>
         
         <button class="icon-btn" onclick="openDrawModal()" title="Набросм"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Набросок</button>
-        <button class="btn btn-success" id="completeBtn" onclick="toggleComplete()"> Отметить как обработанное</button>
+        <button class="btn btn-success" id="completeBtn" onclick="toggleComplete()"> ✓ Готово</button>
         <button class="btn btn-ghost admin-only hidden" onclick="deleteCurrentRef()" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Удалить референс</button>
       </div>
       <div id="attachmentsGrid" class="attachments-grid"></div>
@@ -427,7 +427,7 @@ class='q-tab ${r.id===activeRefId?'active':''}' onclick='openRef(${r.id})'><span
 class='q-dot ${r.status}'></span><span>#${escapeHtml(r.num || r.id)}</span></div>`).join('');}function
 updateDetailStatusUI(ref){const
 pill=document.getElementById('detailStatusPill');const
-btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill\nstatus-done';btn.textContent='↺ Вернуть в доработку';btn.className='btn\nbtn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill\nstatus-pending';btn.textContent='✓ Готово / Отправить\nкомментарий';btn.className='btn btn-success';}}async function
+btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill\nstatus-done';btn.textContent='↺ В доработку';btn.className='btn\nbtn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill\nstatus-pending';btn.textContent='✓ Готово / Отправить\nкомментарий';btn.className='btn btn-success';}}async function
 saveRefPatch(id,patch){const
 label=document.getElementById('saveStateLabel');label.textContent='Сохраняется...';const
 res=await
