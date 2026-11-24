@@ -314,14 +314,14 @@ body{
     </div>
     <div id="adminNoteBox" class="admin-note hidden"></div>
     <div class="editor-card">
-      <div class="editor-head"><label class="admin-only hidden" style="display:flex;align-items:center;gap:6px;font-weight:600;">Номер <input id="numInput" class="input" style="width:96px;padding:6px 8px;" placeholder="001" oninput="scheduleNumSave()"></label><span id="saveStateLabel"></span></div>
+      <div class="editor-head"><label class="admin-only hidden" style="display:flex;align-items:center;gap:6px;font-weight:600;">Номер <input id="numInput" class="input" style="width:52px;padding:6px 8px;text-align:center;" placeholder="01" oninput="scheduleNumSave()"></label><label class="admin-only hidden" style="display:flex;align-items:center;gap:6px;font-weight:600;">Просмотров: <input id="viewsInput" class="input" style="width:80px;padding:6px 8px;" placeholder="—" onchange="saveViews(activeRefId,this.value)"></label><span id="saveStateLabel"></span></div>
       <textarea id="commentInput" placeholder="Комментарий / что изменить:" oninput="scheduleSaveDraft()"></textarea>
       <div class="tools-bar">
         <button class="icon-btn" id="micBtn" onclick="toggleSpeech()" title="Голос"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></svg> <span id="micLabel">Голос</span></button>
         
         <button class="icon-btn" onclick="openDrawModal()" title="Набросм"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg> Набросок</button>
         <button class="btn btn-success" id="completeBtn" onclick="toggleComplete()"> ✓ Готово</button>
-        <button class="btn btn-ghost admin-only hidden" onclick="deleteCurrentRef()" title="Удалить"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg> Удалить референс</button>
+        <button class="btn btn-ghost admin-only hidden" onclick="deleteCurrentRef()" title="Удалить">Удалить</button>
       </div>
       <div id="attachmentsGrid" class="attachments-grid"></div>
     </div>
@@ -426,7 +426,7 @@ class='card-meta'>${viewsLine}${metaParts.length?'<br>'+escapeHtml(metaParts.joi
 flushDraft();stopSpeechIfActive();activeRefId=null;document.getElementById('ytPlayer').src='';document.getElementById('detailView').classList.add('hidden');document.getElementById('catalogView').classList.remove('hidden');renderCatalog();}async function openRef(id){if(activeRefId&&activeRefId!==id)await
 flushDraft();stopSpeechIfActive();activeRefId=id;const
 ref=refs.find(r=>r.id===id);if(!ref)return;document.getElementById('catalogView').classList.add('hidden');document.getElementById('detailView').classList.remove('hidden');renderQuickTabs();document.getElementById('detailIdBadge').textContent='#'+(ref.num||ref.id);document.getElementById('detailTitle').textContent=ref.title;document.getElementById('ytPlayer').src='https://www.youtube.com/embed/'+ref.ytId+'?playsinline=1&rel=0';const
-noteBox=document.getElementById('adminNoteBox');if(ref.adminNote){noteBox.textContent='От\nавтора:\n'+ref.adminNote;noteBox.classList.remove('hidden');}else{noteBox.classList.add('hidden');}document.getElementById('commentInput').value=ref.comment||'';document.getElementById('numInput').value=ref.num||'';document.getElementById('saveStateLabel').textContent='';updateDetailStatusUI(ref);renderAttachments(ref);window.scrollTo({top:0,behavior:'instant'});}function
+noteBox=document.getElementById('adminNoteBox');if(ref.adminNote){noteBox.textContent='От\nавтора:\n'+ref.adminNote;noteBox.classList.remove('hidden');}else{noteBox.classList.add('hidden');}document.getElementById('commentInput').value=ref.comment||'';document.getElementById('numInput').value=ref.num||'';document.getElementById('viewsInput').value=(ref.views||'');document.getElementById('saveStateLabel').textContent='';updateDetailStatusUI(ref);renderAttachments(ref);window.scrollTo({top:0,behavior:'instant'});}function
 renderQuickTabs(){const
 list=getFilteredRefs();document.getElementById('quickTabs').innerHTML=list.map(r=>`<div
 class='q-tab ${r.id===activeRefId?'active':''}' onclick='openRef(${r.id})'><span
