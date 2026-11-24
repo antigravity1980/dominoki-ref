@@ -427,7 +427,7 @@ class='q-tab ${r.id===activeRefId?'active':''}' onclick='openRef(${r.id})'><span
 class='q-dot ${r.status}'></span><span>#${escapeHtml(r.num || r.id)}</span></div>`).join('');}function
 updateDetailStatusUI(ref){const
 pill=document.getElementById('detailStatusPill');const
-btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill\nstatus-done';btn.textContent='↺ В доработку';btn.className='btn\nbtn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill\nstatus-pending';btn.textContent='✓ Готово / Отправить\nкомментарий';btn.className='btn btn-success';}}async function
+btn=document.getElementById('completeBtn');if(ref.status==='done'){pill.textContent='Обработано';pill.className='status-pill\nstatus-done';btn.textContent='↺ В доработку';btn.className='btn\nbtn-ghost';}else{pill.textContent='Ждёт разбора';pill.className='status-pill\nstatus-pending';btn.textContent='✓ Готово';btn.className='btn btn-success';}}async function
 saveRefPatch(id,patch){const
 label=document.getElementById('saveStateLabel');label.textContent='Сохраняется...';const
 res=await
