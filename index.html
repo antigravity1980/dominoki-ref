@@ -416,7 +416,7 @@ hasDraft=!isDone&&((r.comment||'').trim()||(r.attachments&&r.attachments.length)
 statusText=isDone?'Обработано':(hasDraft?'Черновик':'Ждёт разбора');const
 statusClass=isDone?'status-done':'status-pending';const
 metaParts=[];if(r.comment)metaParts.push('💬\n'+r.comment);if(r.attachments&&r.attachments.length)metaParts.push('📎\n'+r.attachments.length);const
-viewsVal=(r.views||'').trim();constviewsLine=isAdmin?`<input class='views-input' placeholder='👁 Просмотры' value='${escapeHtml(viewsVal)}' onclick='event.stopPropagation()' onchange='saveViews(${r.id},this.value)'>`:(viewsVal?`<span class='views-line'>👁 ${escapeHtml(viewsVal)}</span>`:'');return `<div class='card ${isDone?'is-done':''}'
+viewsVal=(r.views||'').trim();const viewsLine=isAdmin?`<input class='views-input' placeholder='👁 Просмотры' value='${escapeHtml(viewsVal)}' onclick='event.stopPropagation()' onchange='saveViews(${r.id},this.value)'>`:(viewsVal?`<span class='views-line'>👁 ${escapeHtml(viewsVal)}</span>`:'');return `<div class='card ${isDone?'is-done':''}'
 onclick='openRef(${r.id})'><div class='thumb-wrap'><img
 src='https://img.youtube.com/vi/${escapeHtml(r.ytId)}/mqdefault.jpg' alt=''
 loading='lazy' /><span class='ref-id-badge'>#${escapeHtml(r.num || r.id)}</span></div><div
